@@ -19,11 +19,11 @@ import subStates.options.OptionsSubState;
 class PauseSubState extends MusicBeatSubState
 {
 	var optionShit:Array<String> = [
-		"resume",
-		"restart song",
+		"voltar",
+		"carregar musica dnv",
 		"botplay",
-		"options",
-		"exit to menu",
+		"opções",
+		"saida desse menu",
 	];
 	
 	var curSelected:Int = 0;
@@ -88,7 +88,7 @@ class PauseSubState extends MusicBeatSubState
 			if(textArray[i] == "") continue;
 		
 			var text = new FlxText(0,0,0,textArray[i].toUpperCase());
-			text.setFormat(Main.gFont, 36, 0xFFFFFFFF, RIGHT);
+			text.setFormat(Main.gFont, 36, 0xFFFFFFFF, CENTER);
 			text.setPosition(FlxG.width - text.width - 10, 10 + 40 * i);
 			textsGrp.add(text);
 			
@@ -98,7 +98,7 @@ class PauseSubState extends MusicBeatSubState
 		}
 		
 		bottomTxt = new FlxText(0,0,0,"");
-		bottomTxt.setFormat(Main.gFont, 36, 0xFFFFFFFF, RIGHT);
+		bottomTxt.setFormat(Main.gFont, 36, 0xFFFFFFFF, CENTER);
 		add(bottomTxt);
 
 		pauseSong = new FlxSound();
