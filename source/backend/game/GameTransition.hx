@@ -38,20 +38,14 @@ class GameTransition extends MusicBeatSubState
 					for (x in 0...cols) {
 						var block = new FlxSprite(x * blockSize, y * blockSize).makeGraphic(Std.int(blockSize + 2), Std.int(blockSize + 2), 0xFF000000);
 						block.scrollFactor.set(0, 0);
-						
-						if (fadeOut) {
-							block.scale.set(1, 1);
-						} else {
-							block.scale.set(0, 0);
-						}
-						
+						block.alpha = fadeOut ? 1 : 0;
 						add(block);
 
-						var delay:Float = (x + y) * 0.03; 
+						var delay:Float = ((rows - 1 - y) + x) * 0.05; 
 
-						FlxTween.tween(block.scale, {x: fadeOut ? 0 : 1, y: fadeOut ? 0 : 1}, 0.35, {
+						FlxTween.tween(block, {alpha: fadeOut ? 0 : 1}, 0.35, {
 							startDelay: delay,
-							ease: FlxEase.cubeOut,
+							ease: FlxEase.linear,
 							onComplete: function(twn:FlxTween) {
 								blocksCompleted++;
 								if (blocksCompleted >= totalBlocks) {
@@ -73,9 +67,9 @@ class GameTransition extends MusicBeatSubState
 				add(sprGrad);
 				
 				var yPos:Array<Float> = [
-					-sprBlack.height - sprGrad.height - 40,
+					FlxG.height + sprGrad.height + 40,
 					FlxG.height / 2 - sprBlack.height / 2,
-					FlxG.height + sprGrad.height + 40
+					-sprBlack.height - sprGrad.height - 40
 				];
 				var curY:Int = (fadeOut ? 1 : 0);
 				
@@ -113,7 +107,7 @@ class GameTransition extends MusicBeatSubState
 	
 	function updateGradPos():Void {
 		if (sprGrad != null && sprBlack != null) {
-			sprGrad.y = sprBlack.y + (fadeOut ? -sprGrad.height : sprBlack.height);
+			sprGrad.y = sprBlack.y + (fadeOut ? sprBlack.height : -sprGrad.height);
 		}
 	}
 	
