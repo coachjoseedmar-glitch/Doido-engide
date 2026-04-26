@@ -12,6 +12,7 @@ import openfl.Lib;
 import openfl.display.Sprite;
 import openfl.events.UncaughtErrorEvent;
 import flixel.util.typeLimit.NextState;
+import flixel.util.FlxSave; // Import necessário para o save
 
 #if desktop
 import backend.system.ALSoftConfig;
@@ -41,7 +42,22 @@ class Main extends Sprite
 		var ws:Array<String> = SaveData.displaySettings.get("Window Size")[0].split("x");
 		var windowSize:Array<Int> = [Std.parseInt(ws[0]),Std.parseInt(ws[1])];
 
-		addChild(new FlxGame(windowSize[0], windowSize[1], Init, 120, 120, true));
+		// --- LÓGICA DA LOGO HAXEFLIXEL (APARECE UMA ÚNICA VEZ) ---
+		var showSplash:Bool = false; 
+		var splashSave:FlxSave = new FlxSave();
+		splashSave.bind('haxeSplashCheck', 'arthur/noobEngine');
+
+		if (splashSave.data.seenBefore != null && splashSave.data.seenBefore == true) {
+			showSplash = true; // Se já viu, skipSplash = true (Pula)
+		} else {
+			showSplash = false; // Se não viu, skipSplash = false (Mostra a logo colorido)
+			splashSave.data.seenBefore = true;
+			splashSave.flush();
+		}
+		// -------------------------------------------------------
+
+		// Agora usamos a variável showSplash no lugar do "true" que estava fixo
+		addChild(new FlxGame(windowSize[0], windowSize[1], Init, 120, 120, showSplash));
 
 		#if android
 		FlxG.android.preventDefaultKeys = [BACK];
@@ -60,9 +76,7 @@ class Main extends Sprite
 		FlxG.signals.gameResized.add(function(w, h) {
 			resetCamCache();
 		});
-		// Prevent flixel from listening to key inputs when switching fullscreen mode
-		// also lets you fullscreen with F11
-		// thanks @nebulazorua, @crowplexus, @diogotvv
+
 		FlxG.stage.addEventListener(openfl.events.KeyboardEvent.KEY_DOWN, (e) ->
 		{
 			if (e.keyCode == FlxKey.F11)
@@ -115,7 +129,6 @@ class Main extends Sprite
 		Logs.print(stackTraceString, ERROR, true, true, false, false);
 		Logs.print('Crash dump saved in $normalPath', WARNING, true, true, false, false);
 
-		// byebye
 		#if (flixel < "6.0.0")
 		FlxG.bitmap.dumpCache();
 		#end
@@ -129,8 +142,8 @@ class Main extends Sprite
 	
 	public static var activeState:FlxState;
 	
-	public static var skipClearMemory:Bool = false; // dont
-	public static var skipTrans:Bool = true; // starts on but it turns false inside Init
+	public static var skipClearMemory:Bool = false; 
+	public static var skipTrans:Bool = true; 
 	public static var lastTransition:String = '';
 	public static function switchState(?target:NextState, transition:String = 'funkin'):Void
 	{
@@ -147,16 +160,13 @@ class Main extends Sprite
 		if(skipTrans)
 			return trans.finishCallback();
 		
-		//FlxG.state.openSubState(trans);
 		if(activeState != null)
 			activeState.openSubState(trans);
 	}
 	
-	// you could just do Main.switchState() but whatever
 	public static function resetState(transition:String = 'funkin'):Void
 		return switchState(null, transition);
 
-	// so you dont have to type it every time
 	public static function skipStuff(?ohreally:Bool = true):Void
 	{
 		skipClearMemory = ohreally;
@@ -179,3 +189,4 @@ class Main extends Sprite
 		}
 	}
 }
+
