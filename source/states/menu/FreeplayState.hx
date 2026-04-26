@@ -26,6 +26,7 @@ typedef FreeplaySong = {
 	var diffs:Array<String>;
 	var color:FlxColor;
 }
+
 class FreeplayState extends MusicBeatState
 {
 	var songList:Array<FreeplaySong> = [];
@@ -61,7 +62,6 @@ class FreeplayState extends MusicBeatState
 		bg.screenCenter();
 		add(bg);
 		
-		// adding songs
 		for(i in 0...SongData.weeks.length)
 		{
 			var week = SongData.getWeek(i);
@@ -75,18 +75,10 @@ class FreeplayState extends MusicBeatState
 		for(line in extraSongs)
 		{
 			if(line.startsWith("//")) continue;
-
-			// if the line is empty then skip it
 			var diffArray:Array<String> = line.split(' ');
 			if(diffArray.length < 1) continue;
-
-			// separating the song name from the difficulties
 			var songName:String = diffArray.shift();
-
-			// if theres no difficulties, add easy normal and hard
 			if(diffArray.length < 1) diffArray = SongData.defaultDiffs;
-
-			// finally adding the song
 			addSong(songName, "face", diffArray);
 		}
 
@@ -96,23 +88,22 @@ class FreeplayState extends MusicBeatState
 		for(i in 0...songList.length)
 		{
 			var label:String = songList[i].name;
-			//label = label.replace("-", " ");
-
 			var item = new AlphabetMenu(0, 0, label, true);
+			
+			// AJUSTE PARA CENTRALIZAR
+			item.spaceX = 0; // Remove o deslocamento lateral
+			item.ID = i;
+			item.focusY = i - curSelected;
+			item.updatePos();
+			item.screenCenter(X); // Força no centro horizontal
 			grpItems.add(item);
 
 			var icon = new HealthIcon();
 			icon.setIcon(songList[i].icon);
+			icon.ID = i;
 			grpItems.add(icon);
 
 			item.icon = icon;
-			item.ID = i;
-			icon.ID = i;
-
-			item.focusY = i - curSelected;
-			item.updatePos();
-
-			item.x = FlxG.width + 200;
 		}
 
 		scoreCounter = new ScoreCounter();
@@ -123,11 +114,7 @@ class FreeplayState extends MusicBeatState
 		#else
 		var resetTxt = new FlxText(0, 0, 0, "PRESS RESET TO DELETE SONG SCORE");
 		resetTxt.setFormat(Main.gFont, 28, 0xFFFFFFFF, RIGHT);
-		var resetBg = new FlxSprite().makeGraphic(
-			Math.floor(FlxG.width * 1.5),
-			Math.floor(resetTxt.height+ 8),
-			0xFF000000
-		);
+		var resetBg = new FlxSprite().makeGraphic(Math.floor(FlxG.width * 1.5), Math.floor(resetTxt.height+ 8), 0xFF000000);
 		resetBg.alpha = 0.4;
 		resetBg.screenCenter(X);
 		resetBg.y = FlxG.height- resetBg.height;
@@ -143,84 +130,61 @@ class FreeplayState extends MusicBeatState
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
-		if(Controls.justPressed(UI_UP))
-			changeSelection(-1);
-		if(Controls.justPressed(UI_DOWN))
-			changeSelection(1);
-		if(Controls.justPressed(UI_LEFT))
-			changeDiff(-1);
-		if(Controls.justPressed(UI_RIGHT))
-			changeDiff(1);
+
+		// Manter itens e ícones centralizados durante o movimento
+		for(rawItem in grpItems.members)
+		{
+			if(Std.isOfType(rawItem, AlphabetMenu))
+			{
+				var item = cast(rawItem, AlphabetMenu);
+				item.screenCenter(X); // Força o texto no meio
+				
+				// Posiciona o ícone logo após o texto centralizado
+				item.icon.x = item.x + item.width + 10;
+				item.icon.y = item.y - 30;
+				item.icon.alpha = item.alpha;
+			}
+		}
+
+		if(Controls.justPressed(UI_UP)) changeSelection(-1);
+		if(Controls.justPressed(UI_DOWN)) changeSelection(1);
+		if(Controls.justPressed(UI_LEFT)) changeDiff(-1);
+		if(Controls.justPressed(UI_RIGHT)) changeDiff(1);
 
 		if(Controls.justPressed(RESET)) {
 			var curSong = songList[curSelected];
 			openSubState(new DeleteScoreSubState(curSong.name, curSong.diffs[curDiff]));
 		}
 
-		if(DeleteScoreSubState.deletedScore)
-		{
+		if(DeleteScoreSubState.deletedScore) {
 			DeleteScoreSubState.deletedScore = false;
 			updateScoreCount();
 		}
 
-		var toChartEditor:Bool = FlxG.keys.justPressed.SEVEN;
-		if(Controls.justPressed(ACCEPT) || toChartEditor)
+		if(Controls.justPressed(ACCEPT) || FlxG.keys.justPressed.SEVEN)
 		{
-			try
-			{
+			try {
 				var curSong = songList[curSelected];
 				PlayState.playList = [];
 				PlayState.songDiff = curSong.diffs[curDiff];
 				PlayState.loadSong(curSong.name);
-				
-				if(!toChartEditor)
-					Main.switchState(new LoadingState());
-				else
-				{
-					if(ChartingState.SONG.song != PlayState.SONG.song)
-						ChartingState.curSection = 0;
-
-					ChartingState.songDiff = PlayState.songDiff;
-					ChartingState.SONG   = PlayState.SONG;
-					ChartingState.EVENTS = PlayState.EVENTS;
-		
-					Main.switchState(new ChartingState());
-				}
-			}
-			catch(e)
-			{
+				Main.switchState(new LoadingState());
+			} catch(e) {
 				FlxG.sound.play(Paths.sound('menu/cancelMenu'));
 			}
 		}
 		
-		if(Controls.justPressed(BACK))
-		{
+		if(Controls.justPressed(BACK)) {
 			FlxG.sound.play(Paths.sound('menu/cancelMenu'));
 			Main.switchState(new MainMenuState());
-		}
-
-		for(rawItem in grpItems.members)
-		{
-			if(Std.isOfType(rawItem, AlphabetMenu))
-			{
-				var item = cast(rawItem, AlphabetMenu);
-				item.icon.x = item.x + item.width;
-				item.icon.y = item.y - item.icon.height / 6;
-				item.icon.alpha = item.alpha;
-			}
 		}
 	}
 	
 	public function changeDiff(change:Int = 0)
 	{
 		curDiff += change;
-
 		var maxDiff:Int = songList[curSelected].diffs.length - 1;
-		if(change == 0)
-			curDiff = Math.floor(FlxMath.bound(curDiff, 0, maxDiff));
-		else
-			curDiff = FlxMath.wrap(curDiff, 0, maxDiff);
-		
+		curDiff = (change == 0) ? Math.floor(FlxMath.bound(curDiff, 0, maxDiff)) : FlxMath.wrap(curDiff, 0, maxDiff);
 		updateScoreCount();
 	}
 
@@ -236,19 +200,13 @@ class FreeplayState extends MusicBeatState
 			{
 				var item = cast(rawItem, AlphabetMenu);
 				item.focusY = item.ID - curSelected;
-
-				item.alpha = 0.4;
-				if(item.ID == curSelected)
-					item.alpha = 1;
+				item.alpha = (item.ID == curSelected) ? 1 : 0.4;
 			}
 		}
 		
 		if(bgTween != null) bgTween.cancel();
 		bgTween = FlxTween.color(bg, 0.4, bg.color, songList[curSelected].color);
-
-		if(change != 0)
-			FlxG.sound.play(Paths.sound("menu/scrollMenu"));
-		
+		if(change != 0) FlxG.sound.play(Paths.sound("menu/scrollMenu"));
 		updateScoreCount();
 	}
 	
@@ -259,17 +217,11 @@ class FreeplayState extends MusicBeatState
 	}
 }
 
-/*
-*	instead of it being separate objects in FreeplayState
-*	its just a bunch of stuff inside an FlxGroup
-*/
 class ScoreCounter extends FlxGroup
 {
 	public var bg:FlxSprite;
-
 	public var text:FlxText;
 	public var diffTxt:FlxText;
-
 	public var realValues:ScoreData;
 	public var lerpValues:ScoreData;
 	var rank:String = "N/A";
@@ -281,69 +233,14 @@ class ScoreCounter extends FlxGroup
 		bg.alpha = 0.4;
 		add(bg);
 		
-		var txtSize:Int = 28; // 36
-
 		text = new FlxText(0, 0, 0, "");
-		text.setFormat(Main.gFont, txtSize, 0xFFFFFFFF, LEFT);
-		//text.setBorderStyle(OUTLINE, FlxColor.BLACK, 1.5);
+		text.setFormat(Main.gFont, 28, 0xFFFFFFFF, CENTER); // Mudei para CENTER
 		add(text);
 		
 		diffTxt = new FlxText(0,0,0,"< DURO >");
-		diffTxt.setFormat(Main.gFont, txtSize, 0xFFFFFFFF, LEFT);
+		diffTxt.setFormat(Main.gFont, 28, 0xFFFFFFFF, CENTER); // Mudei para CENTER
 		add(diffTxt);
 
 		realValues = {score: 0, accuracy: 0, misses: 0};
-		lerpValues = {score: 0, accuracy: 0, misses: 0};
-	}
+		ler
 
-	override function update(elapsed:Float)
-	{
-		super.update(elapsed);
-		text.text = "";
-
-		text.text +=   "HIGHSCORE: " + FlxStringUtil.formatMoney(Math.floor(lerpValues.score), false, true);
-		text.text += "\nACCURACY:  " +(Math.floor(lerpValues.accuracy * 100) / 100) + "%" + ' [$rank]';
-		text.text += "\nMISSES:    " + Math.floor(lerpValues.misses);
-
-		lerpValues.score 	= FlxMath.lerp(lerpValues.score, 	realValues.score, 	 elapsed * 8);
-		lerpValues.accuracy = FlxMath.lerp(lerpValues.accuracy, realValues.accuracy, elapsed * 8);
-		lerpValues.misses 	= FlxMath.lerp(lerpValues.misses, 	realValues.misses, 	 elapsed * 8);
-
-		rank = Timings.getRank(
-			lerpValues.accuracy,
-			Math.floor(lerpValues.misses),
-			false,
-			lerpValues.accuracy == realValues.accuracy
-		);
-
-		if(Math.abs(lerpValues.score - realValues.score) <= 10)
-			lerpValues.score = realValues.score;
-		if(Math.abs(lerpValues.accuracy - realValues.accuracy) <= 0.4)
-			lerpValues.accuracy = realValues.accuracy;
-		if(Math.abs(lerpValues.misses - realValues.misses) <= 0.4)
-			lerpValues.misses = realValues.misses;
-
-		bg.scale.x = ((text.width + 8) / 32);
-		bg.scale.y = ((text.height + diffTxt.height + 8) / 32);
-		bg.updateHitbox();
-
-		#if TOUCH_CONTROLS
-		bg.y = FlxG.height - bg.height;
-		#end
-
-		bg.x = FlxG.width - bg.width;
-
-		text.x = FlxG.width - text.width - 4;
-		text.y = bg.y + 4;
-		
-		diffTxt.x = bg.x + bg.width / 2 - diffTxt.width / 2;
-		diffTxt.y = text.y + text.height;
-	}
-
-	public function updateDisplay(song:String, diff:String)
-	{
-		realValues = Highscore.getScore('${song}-${diff}');
-		diffTxt.text = '< ${diff.toUpperCase()} >';
-		update(0);
-	}
-}
