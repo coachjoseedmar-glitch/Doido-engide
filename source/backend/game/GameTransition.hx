@@ -1,10 +1,10 @@
 package backend.game;
 
-import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.util.FlxGradient;
 import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
+import flixel.group.FlxGroup;
 import backend.game.MusicBeatData.MusicBeatSubState;
 
 class GameTransition extends MusicBeatSubState
@@ -16,9 +16,8 @@ class GameTransition extends MusicBeatSubState
 
 	var sprBlack:FlxSprite;
 	var sprGrad:FlxSprite;
-	
-	var blocksCompleted:Int = 0;
-	var totalBlocks:Int = 0;
+	// Grupo para organizar os cubos
+	var cubeGroup:FlxTypedGroup<FlxSprite>;
 	
 	public function new(fadeOut:Bool = true, transition:String = "funkin")
 	{
@@ -27,28 +26,35 @@ class GameTransition extends MusicBeatSubState
 		this.transition = transition;
 
 		switch(transition) {
-			case 'blocks':
-				var blockSize:Float = 100;
-				var cols:Int = Math.ceil(FlxG.width / blockSize);
-				var rows:Int = Math.ceil(FlxG.height / blockSize);
-				totalBlocks = cols * rows;
-				blocksCompleted = 0;
+			case 'cubes':
+				cubeGroup = new FlxTypedGroup<FlxSprite>();
+				add(cubeGroup);
 
-				for (y in 0...rows) {
-					for (x in 0...cols) {
-						var block = new FlxSprite(x * blockSize, y * blockSize).makeGraphic(Std.int(blockSize + 2), Std.int(blockSize + 2), 0xFF000000);
-						block.scrollFactor.set(0, 0);
-						block.alpha = fadeOut ? 1 : 0;
-						add(block);
-
-						var delay:Float = ((rows - 1 - y) + x) * 0.05; 
-
-						FlxTween.tween(block, {alpha: fadeOut ? 0 : 1}, 0.35, {
+				var size:Int = 120; // Tamanho de cada cubo
+				var cols:Int = Math.ceil(FlxG.width / size) + 1;
+				var rows:Int = Math.ceil(FlxG.height / size);
+				
+				for (row in 0...rows) {
+					for (col in 0...cols) {
+						// Lógica de Varredura:
+						// Se for entrada (fadeOut=false): vem da Direita (Width) para sua posição (col*size)
+						// Se for saída (fadeOut=true): sai da sua posição para a Esquerda (-Width)
+						var targetX:Float = col * size;
+						var startX:Float = fadeOut ? targetX : FlxG.width + size;
+						var endX:Float = fadeOut ? -FlxG.width - (size * 2) : targetX;
+						
+						var cube:FlxSprite = new FlxSprite(startX, row * size).makeGraphic(size, size, 0xFF000000);
+						cubeGroup.add(cube);
+						
+						// Delay baseado na coluna para criar o efeito de "onda" da direita para esquerda
+						var delay:Float = (fadeOut ? (cols - col) : col) * 0.04;
+						
+						FlxTween.tween(cube, {x: endX}, 0.7, {
+							ease: FlxEase.cubeInOut,
 							startDelay: delay,
-							ease: FlxEase.linear,
 							onComplete: function(twn:FlxTween) {
-								blocksCompleted++;
-								if (blocksCompleted >= totalBlocks) {
+								// Finaliza quando o último cubo terminar o movimento
+								if (row == rows - 1 && (fadeOut ? col == 0 : col == cols - 1)) {
 									endTransition();
 								}
 							}
@@ -57,6 +63,7 @@ class GameTransition extends MusicBeatSubState
 				}
 
 			case 'funkin':
+				// Código original do funkin...
 				sprBlack = new FlxSprite().makeGraphic(FlxG.width * 2, FlxG.height * 2, 0xFF000000);
 				sprBlack.screenCenter(X);
 				add(sprBlack);
@@ -67,9 +74,9 @@ class GameTransition extends MusicBeatSubState
 				add(sprGrad);
 				
 				var yPos:Array<Float> = [
-					FlxG.height + sprGrad.height + 40,
+					-sprBlack.height - sprGrad.height - 40,
 					FlxG.height / 2 - sprBlack.height / 2,
-					-sprBlack.height - sprGrad.height - 40
+					FlxG.height + sprGrad.height + 40
 				];
 				var curY:Int = (fadeOut ? 1 : 0);
 				
@@ -77,11 +84,11 @@ class GameTransition extends MusicBeatSubState
 				updateGradPos();
 
 				FlxTween.tween(sprBlack, {y: yPos[curY + 1]}, fadeOut ? 0.6 : 0.8, {
-					onComplete: function(twn:FlxTween)
-					{
+					onComplete: function(twn:FlxTween) {
 						endTransition();
 					}
 				});
+
 			default:
 				sprBlack = new FlxSprite().makeGraphic(FlxG.width * 2, FlxG.height * 2, 0xFF000000);
 				sprBlack.screenCenter();
@@ -89,8 +96,7 @@ class GameTransition extends MusicBeatSubState
 				
 				sprBlack.alpha = (fadeOut ? 1 : 0);
 				FlxTween.tween(sprBlack, {alpha: fadeOut ? 0 : 1}, 0.32, {
-					onComplete: function(twn:FlxTween)
-					{
+					onComplete: function(twn:FlxTween) {
 						endTransition();
 					}
 				});
@@ -106,21 +112,16 @@ class GameTransition extends MusicBeatSubState
 	}
 	
 	function updateGradPos():Void {
-		if (sprGrad != null && sprBlack != null) {
-			sprGrad.y = sprBlack.y + (fadeOut ? sprBlack.height : -sprGrad.height);
-		}
+		if (sprGrad != null && sprBlack != null)
+			sprGrad.y = sprBlack.y + (fadeOut ? -sprGrad.height : sprBlack.height);
 	}
 	
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
-
 		this.cameras = [FlxG.cameras.list[FlxG.cameras.list.length - 1]];
 
-		switch(transition) {
-			case 'funkin':
-				updateGradPos();
-			default:
-		}
+		if (transition == 'funkin') updateGradPos();
 	}
 }
+
