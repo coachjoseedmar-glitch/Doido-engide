@@ -8,6 +8,7 @@ import flixel.group.FlxGroup;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import flixel.util.FlxTimer;
+import flixel.tweens.FlxTween;
 import objects.menu.Alphabet;
 import states.menu.MainMenuState;
 
@@ -22,6 +23,7 @@ class TitleState extends MusicBeatState
 	var blackScreen:FlxSprite;
 	var gf:FlxSprite;
 	var logoBump:FlxSprite;
+	var bg:FlxSprite; // Novo fundo colorido
 	
 	var enterTxt:FlxSprite;
 	
@@ -30,6 +32,18 @@ class TitleState extends MusicBeatState
 	override function create()
 	{
 		super.create();
+		
+		// Criando o fundo colorido antes de tudo
+		bg = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, 0xFF333333);
+		add(bg);
+		
+		// Inicia a mudança de cor suave se a epilepsia não estiver ativa
+		if (FlxG.save.data.flashing) {
+			updateColor();
+		} else {
+			bg.color = 0xFF222222; // Cor fixa e escura para segurança
+		}
+
 		if(!introEnded)
 		{
 			new FlxTimer().start(0.5, function(tmr:FlxTimer) {
@@ -46,26 +60,29 @@ class TitleState extends MusicBeatState
 		persistentUpdate = true;
 		Conductor.setBPM(102);
 		
+		// GF Invisível como solicitado
 		gf = new FlxSprite();
 		gf.frames = Paths.getSparrowAtlas('menu/title/gfDanceTitle');
 		gf.animation.addByIndices('danceLeft', 'gfDance', [30, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], "", 24, false);
 		gf.animation.addByIndices('danceRight','gfDance', [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29], "", 24, false);
-		gf.x = FlxG.width - gf.width - 20;
-		gf.screenCenter(Y);
+		gf.screenCenter();
+		gf.visible = false; // Tornando a GF invisível
 		add(gf);
-		gf.animation.play('danceLeft');
 		
-		logoBump = new FlxSprite(-100, -80);
+		// LogoBump centralizado
+		logoBump = new FlxSprite();
 		logoBump.frames = Paths.getSparrowAtlas('menu/title/logoBumpin');
 		logoBump.animation.addByPrefix('bump', 'logo bumpin', 24, false);
-		logoBump.animation.play('bump');
+		logoBump.screenCenter(); // Centraliza no meio da tela
+		logoBump.y -= 50; // Sobe um pouquinho para não bater no texto de Enter
 		add(logoBump);
 		
-		enterTxt = new FlxSprite(500 / 4);
+		enterTxt = new FlxSprite();
 		enterTxt.frames = Paths.getSparrowAtlas('menu/title/titleEnter');
 		enterTxt.animation.addByPrefix('idle', 'Press Enter to Begin', 24, true);
 		enterTxt.animation.addByPrefix('pressed', 'ENTER PRESSED', 24, true);
 		enterTxt.animation.play('idle');
+		enterTxt.screenCenter(X);
 		enterTxt.y = FlxG.height - enterTxt.height - 60;
 		add(enterTxt);
 		
@@ -88,6 +105,19 @@ class TitleState extends MusicBeatState
 			skipIntro(true);
 	}
 	
+	// Função para mudar a cor suavemente
+	function updateColor()
+	{
+		// Gera uma cor aleatória
+		var newColor:FlxColor = FlxColor.fromHSB(FlxG.random.int(0, 359), 0.5, 0.8);
+		
+		FlxTween.color(bg, 4, bg.color, newColor, {
+			onComplete: function(twn:FlxTween) {
+				updateColor(); // Chama de novo para ser infinito
+			}
+		});
+	}
+	
 	var pressedEnter:Bool = false;
 	
 	override function update(elapsed:Float)
@@ -106,7 +136,11 @@ class TitleState extends MusicBeatState
 					pressedEnter = true;
 					enterTxt.animation.play('pressed');
 					FlxG.sound.play(Paths.sound('menu/confirmMenu'));
-					CoolUtil.flash(FlxG.camera, 1, 0xFFFFFFFF);
+					
+					// Só brilha a tela se a epilepsia estiver desligada
+					if (FlxG.save.data.flashing)
+						CoolUtil.flash(FlxG.camera, 1, 0xFFFFFFFF);
+						
 					new FlxTimer().start(2.0, function(tmr:FlxTimer)
 					{
 						Main.switchState(new MainMenuState());
@@ -121,6 +155,10 @@ class TitleState extends MusicBeatState
 	override function beatHit()
 	{
 		super.beatHit();
+		
+		if(logoBump != null)
+			logoBump.animation.play('bump', true);
+		
 		if(!introEnded)
 		{
 			switch(curBeat)
@@ -131,7 +169,6 @@ class TitleState extends MusicBeatState
 					addText(['present'], false);
 				case 4:
 					addText([]);
-					
 				case 5:
 					addText(['não associado a']);
 				case 7:
@@ -140,7 +177,6 @@ class TitleState extends MusicBeatState
 				case 8:
 					addText([]);
 					ngSpr.visible = false;
-					
 				case 9:
 					addText([curWacky[0]]);
 				case 11:
@@ -158,13 +194,6 @@ class TitleState extends MusicBeatState
 					skipIntro();
 			}
 		}
-		
-		logoBump.animation.play('bump', true);
-		
-		if(gf.animation.curAnim.name == 'danceLeft')
-			gf.animation.play('danceRight');
-		else
-			gf.animation.play('danceLeft');
 	}
 	
 	public function skipIntro(force:Bool = false)
@@ -177,7 +206,10 @@ class TitleState extends MusicBeatState
 		
 		addText([]);
 		ngSpr.visible = false;
-		CoolUtil.flash(FlxG.camera, Conductor.crochet * 4 / 1000, 0xFFFFFFFF);
+		
+		if (FlxG.save.data.flashing)
+			CoolUtil.flash(FlxG.camera, Conductor.crochet * 4 / 1000, 0xFFFFFFFF);
+			
 		remove(blackScreen);
 	}
 	
@@ -195,4 +227,5 @@ class TitleState extends MusicBeatState
 			textGroup.add(item);
 		}
 	}
-}
+			}
+
