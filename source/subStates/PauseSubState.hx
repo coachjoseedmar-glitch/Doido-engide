@@ -2,7 +2,6 @@ package subStates;
 
 import backend.song.Conductor;
 import flixel.FlxG;
-import flixel.FlxBasic;
 import flixel.FlxSprite;
 import flixel.group.FlxGroup;
 import flixel.math.FlxMath;
@@ -33,11 +32,13 @@ class PauseSubState extends MusicBeatSubState
 	var bottomTxt:FlxText;
 
 	var pauseSong:FlxSound;
-
 	var onCountdown:Bool = false;
 	var delayTween:FlxTween;
-
 	var playstate:PlayState;
+
+	// Novas variáveis para os seus PNGs
+	var mebg:FlxSprite;
+	var fpov:FlxSprite;
 
 	public function new()
 	{
@@ -46,11 +47,30 @@ class PauseSubState extends MusicBeatSubState
 		playstate.setScript("this", this);
 		DiscordIO.changePresence("Paused - Restin' a bit");
 		this.cameras = [FlxG.cameras.list[FlxG.cameras.list.length - 1]];
+
+		// Fundo preto base
 		var banana = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, 0xFF000000);
 		add(banana);
-
 		banana.alpha = 0;
 		FlxTween.tween(banana, {alpha: 0.4}, 0.1);
+
+		// 1. PNG mebg (Debaixo de tudo, movimento escadinha)
+		mebg = new FlxSprite().loadGraphic(Paths.image('mebg'));
+		mebg.antialiasing = true;
+		mebg.screenCenter();
+		add(mebg);
+
+		// Movimento suave de escadinha (diagonal ida e volta)
+		FlxTween.tween(mebg, {x: mebg.x + 30, y: mebg.y - 30}, 4, {
+			ease: FlxEase.sineInOut, 
+			type: PINGPONG
+		});
+
+		// 2. PNG fpov (No meio, acima do mebg)
+		fpov = new FlxSprite().loadGraphic(Paths.image('fpov'));
+		fpov.antialiasing = true;
+		fpov.screenCenter();
+		add(fpov);
 
 		if(!PlayState.startedSong)
 			optionShit.remove("options");
@@ -64,15 +84,12 @@ class PauseSubState extends MusicBeatSubState
 			newItem.ID = i;
 			newItem.focusY = i - curSelected;
 
-			// isn't as accurate to base game
-			newItem.spaceX = 25;
-			newItem.spaceY = 150; // 200
+			newItem.spaceX = 0; // Removido deslocamento para manter no centro
+			newItem.spaceY = 150; 
 
-			// but it looks better
 			newItem.updatePos();
+			newItem.screenCenter(X); // Força as letras no meio
 			optionsGrp.add(newItem);
-
-			newItem.x = 0;
 		}
 		
 		textsGrp = new FlxTypedGroup<FlxText>();
@@ -106,7 +123,6 @@ class PauseSubState extends MusicBeatSubState
 		{
 			@:privateAccess
 			pauseSong.loadEmbedded(playstate.inst._sound, true, false);
-			
 			pauseSong.play(Conductor.songPos);
 			pauseSong.pitch = 0.9;
 			pauseSong.volume = 0;
@@ -133,6 +149,7 @@ class PauseSubState extends MusicBeatSubState
 
 		close();
 	}
+
 	override function close()
 	{
 		pauseSong.stop();
@@ -148,6 +165,12 @@ class PauseSubState extends MusicBeatSubState
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
+
+		// Manter as letras centralizadas durante o update
+		optionsGrp.forEach(function(item:AlphabetMenu) {
+			item.screenCenter(X);
+		});
+
 		bottomTxt.text = "";
 		if(PlayState.botplay)
 			bottomTxt.text += "BOTPLAY";
@@ -175,34 +198,26 @@ class PauseSubState extends MusicBeatSubState
 			{
 				switch(optionShit[curSelected])
 				{
-					default:
-						FlxG.sound.play(Paths.sound("menu/cancelMenu"));
-					
 					case "resume":
 						closePause();
-
 					case "restart song":
 						Main.skipStuff();
 						Main.resetState();
-					
 					case "botplay":
 						FlxG.sound.play(Paths.sound("menu/cancelMenu"));
 						PlayState.botplay = !PlayState.botplay;
-
 					case "options":
-						//Main.switchState(new states.menu.OptionsState(new LoadSongState()));
 						persistentDraw = false;
 						pauseSong.pause();
 						this.openSubState(new OptionsSubState(playstate));
-
 					case "exit to menu":
-						//Main.switchState(new MenuState());
 						persistentDraw = true;
 						PlayState.sendToMenu();
+					default:
+						FlxG.sound.play(Paths.sound("menu/cancelMenu"));
 				}
 			}
 
-			// works the same as resume
 			if(Controls.justPressed(BACK))
 				closePause();
 		}
@@ -221,7 +236,6 @@ class PauseSubState extends MusicBeatSubState
 		for(item in optionsGrp)
 		{
 			item.focusY = item.ID - curSelected;
-
 			item.alpha = 0.4;
 			if(item.ID == curSelected)
 				item.alpha = 1;
@@ -230,4 +244,5 @@ class PauseSubState extends MusicBeatSubState
 		if(change != 0)
 			FlxG.sound.play(Paths.sound("menu/scrollMenu"));
 	}
-				}
+}
+
