@@ -18,12 +18,12 @@ import states.menu.MainMenuState;
 class OptionsSubState extends MusicBeatSubState
 {
     var mainShit:Array<String> = [
-        "preferences",
-        "gameplay",
-        "appearance",
+        "preferencias",
+        "do jogo",
+        "aparencia",
         #if TOUCH_CONTROLS "mobile", #end
-        "adjust offsets",
-        "controls",
+        "ajuste do jeito clich",
+        "controles",
     ];
     var optionShit:Map<String, Array<String>> =
 	[
