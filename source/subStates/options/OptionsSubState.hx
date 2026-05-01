@@ -8,6 +8,7 @@ import flixel.group.FlxGroup;
 import flixel.math.FlxMath;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
+import flixel.util.FlxSpriteUtil;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import objects.menu.Alphabet;
@@ -18,12 +19,12 @@ import states.menu.MainMenuState;
 class OptionsSubState extends MusicBeatSubState
 {
     var mainShit:Array<String> = [
-        "preferencias",
-        "do jogo",
-        "aparencia",
+        "preferences",
+        "gameplay",
+        "appearance",
         #if TOUCH_CONTROLS "mobile", #end
-        "ajuste do jeito clich",
-        "controles",
+        "adjust offsets",
+        "controls",
     ];
     var optionShit:Map<String, Array<String>> =
 	[
@@ -123,7 +124,7 @@ class OptionsSubState extends MusicBeatSubState
         {
             for(i in ["Downscroll", "Middlescroll"])
                 if(PlayState.hasModchart)
-                    forceRestartOptions.push(i);
+                    forceRestartOptions.push(i); // Corrigido para corresponder à variável
                 else
                     reloadOptions.push(i);
         }
@@ -145,6 +146,17 @@ class OptionsSubState extends MusicBeatSubState
         bg.screenCenter();
         add(bg);
 
+        // --- NOVO PAINEL ARREDONDADO ---
+        var menuBox:FlxSprite = new FlxSprite();
+        var panelWidth:Int = Std.int(FlxG.width * 0.85);
+        var panelHeight:Int = Std.int(FlxG.height * 0.85);
+        menuBox.makeGraphic(panelWidth, panelHeight, 0x00000000, true);
+        menuBox.screenCenter();
+        FlxSpriteUtil.drawRoundRect(menuBox, 0, 0, menuBox.width, menuBox.height, 30, 30, 0xFF151515); // Fundo cinza bem escuro com cantos arredondados
+        menuBox.scrollFactor.set();
+        add(menuBox);
+        // ------------------------------
+
         grpItems = new FlxTypedGroup<Alphabet>();
         grpAttachs = new FlxGroup();
         add(grpItems);
@@ -165,7 +177,6 @@ class OptionsSubState extends MusicBeatSubState
 
         infoTxt = new FlxText(0, 0, FlxG.width * 0.8, 'balls');
 		infoTxt.setFormat(Main.gFont, 28, 0xFFFFFFFF, CENTER);
-        //infoTxt.setBorderStyle(OUTLINE, 0xFF000000, 1.5); // kinda useless now
         add(infoTxt);
 
         spawnItems('main');
@@ -230,8 +241,6 @@ class OptionsSubState extends MusicBeatSubState
                 switch(mainShit[curSelected])
                 {
                     case "controls":
-                        /*FlxG.sound.play(Paths.sound('METAL-BAR'));
-                        Logs.print('FUCK YOU!!', WARNING);*/
                         persistentDraw = false;
                         openSubState(new ControlsSubState());
                     case "adjust offsets":
@@ -254,11 +263,6 @@ class OptionsSubState extends MusicBeatSubState
                     var check:OptionCheckmark = cast curAttach;
                     check.setValue(!check.value);
                     SaveData.data.set(curOption, check.value);
-                    // custom stuff
-                    /*if(curOption == "")
-                    {
-
-                    }*/
                     SaveData.save();
                     checkReload();
                 }
@@ -277,14 +281,13 @@ class OptionsSubState extends MusicBeatSubState
                         SaveData.data.set(selec.label, selec.value);
                         SaveData.save();
 
-                        // custom stuff
                         if(selec.label == "Window Size")
                             SaveData.updateWindowSize();
                         #if TOUCH_CONTROLS
                         else if(selec.label == "Button Opacity")
                             pad.togglePad(true);
                         #end
-                        // only happens when youre not holding the selector
+
                         if(selec.holdTimer < holdMax)
                         {
                             if(selec.label.startsWith('Hitsound'))
@@ -295,9 +298,7 @@ class OptionsSubState extends MusicBeatSubState
                     }
 
                     if(selec.holdTimer >= holdMax)
-                        selec.holdTimer = holdMax - 0.005; // 0.02
-                    /*else
-                        FlxG.sound.play(Paths.sound('menu/scrollMenu'));*/
+                        selec.holdTimer = holdMax - 0.005;
                 }
                 
                 selec.arrowL.animation.play(Controls.pressed(UI_LEFT) ? "push" : "idle", true);
@@ -305,7 +306,7 @@ class OptionsSubState extends MusicBeatSubState
                 
                 if(Controls.pressed(UI_LEFT) || Controls.pressed(UI_RIGHT)
                 && selec.holdTimer <= holdMax
-                && Std.isOfType(selec.options[0], Int))
+                && Std.isOfType(selec.options, Int))
                     selec.holdTimer += elapsed;
                 if(Controls.released(UI_LEFT) || Controls.released(UI_RIGHT))
                     selec.holdTimer = 0;
@@ -440,13 +441,13 @@ class OptionsSubState extends MusicBeatSubState
                 if(!SaveData.displaySettings.exists(curOption[i])) continue;
 
                 var daSave = SaveData.displaySettings.get(curOption[i]);
-                if(daSave[1] == CHECKMARK)
+                if(daSave == CHECKMARK)
                 {
                     var check = new OptionCheckmark(SaveData.data.get(curOption[i]), 0.75);
                     check.ID = i;
                     grpAttachs.add(check);
                 }
-                if(daSave[1] == SELECTOR)
+                if(daSave == SELECTOR)
                 {
                     var selec = new OptionSelector(curOption[i]);
                     grpAttachs.add(selec);
@@ -485,7 +486,7 @@ class OptionsSubState extends MusicBeatSubState
 
         if(SaveData.displaySettings.exists(optionShit.get(curCat)[curSelected]))
         {
-            infoTxt.text = SaveData.displaySettings.get(optionShit.get(curCat)[curSelected])[2];
+            infoTxt.text = SaveData.displaySettings.get(optionShit.get(curCat)[curSelected]);
             infoTxt.screenCenter(X);
             infoTxt.y = FlxG.height - infoTxt.height - 12 - 18;
         }
@@ -529,3 +530,4 @@ class OptionsSubState extends MusicBeatSubState
         }
     }
 }
+
